@@ -1,0 +1,2 @@
+# MCP SDK v2 (MCPServer, Streamable HTTP). Pin <3 so a future major bump doesn't break the lab.
+mcp>=2.0.0,<3
