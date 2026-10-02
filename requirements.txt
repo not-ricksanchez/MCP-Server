@@ -1,2 +1,9 @@
 # MCP SDK v2 (MCPServer, Streamable HTTP). Pin <3 so a future major bump doesn't break the lab.
 mcp>=2.0.0,<3
+
+# Tests (Part 3 / CI)
+pytest>=8.0.0,<9
+
+# Agent (Parts 4–6): env files + Ollama on the Mac
+python-dotenv>=1.0.0,<2
+ollama>=0.4.0
