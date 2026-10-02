@@ -1,0 +1,143 @@
+[
+  {
+    "employee_id": "E001",
+    "name": "Avery Chen",
+    "role": "standard",
+    "tenure_years": 6.0,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2019-06-01"},
+      {"item": "monitor", "issued_on": "2021-03-15"}
+    ]
+  },
+  {
+    "employee_id": "E002",
+    "name": "Jordan Patel",
+    "role": "standard",
+    "tenure_years": 2.0,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2025-01-10"},
+      {"item": "monitor", "issued_on": "2025-01-10"}
+    ]
+  },
+  {
+    "employee_id": "E003",
+    "name": "Riley Nguyen",
+    "role": "manager",
+    "tenure_years": 4.0,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2023-05-01"},
+      {"item": "monitor", "issued_on": "2024-08-01"}
+    ]
+  },
+  {
+    "employee_id": "E004",
+    "name": "Sam Okonkwo",
+    "role": "intern",
+    "tenure_years": 0.4,
+    "equipment": []
+  },
+  {
+    "employee_id": "E005",
+    "name": "Casey Brooks",
+    "role": "contractor",
+    "tenure_years": 1.0,
+    "equipment": []
+  },
+  {
+    "employee_id": "E006",
+    "name": "Morgan Ellis",
+    "role": "standard",
+    "tenure_years": 4.0,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2023-02-01"},
+      {"item": "monitor", "issued_on": null}
+    ]
+  },
+  {
+    "employee_id": "E007",
+    "name": "Quinn Hayes",
+    "role": "intern",
+    "tenure_years": 0.6,
+    "equipment": [
+      {"item": "keyboard", "issued_on": "2026-03-01"}
+    ]
+  },
+  {
+    "employee_id": "E008",
+    "name": "Taylor Singh",
+    "role": "intern",
+    "tenure_years": 0.8,
+    "equipment": [
+      {"item": "keyboard", "issued_on": "2025-11-01"},
+      {"item": "mouse", "issued_on": "2025-11-01"},
+      {"item": "headset", "issued_on": "2025-11-01"}
+    ]
+  },
+  {
+    "employee_id": "E009",
+    "name": "Jamie Ortiz",
+    "role": "manager",
+    "tenure_years": 5.0,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2025-06-01"},
+      {"item": "monitor", "issued_on": "2025-06-01"},
+      {"item": "monitor", "issued_on": "2025-09-01"}
+    ]
+  },
+  {
+    "employee_id": "E010",
+    "name": "Reese Kim",
+    "role": "manager",
+    "tenure_years": 7.0,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2025-02-01"},
+      {"item": "monitor", "issued_on": "2022-01-15"}
+    ]
+  },
+  {
+    "employee_id": "E011",
+    "name": "Drew Alvarez",
+    "role": "standard",
+    "tenure_years": 1.5,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2025-09-01"}
+    ]
+  },
+  {
+    "employee_id": "E012",
+    "name": "Parker Singh",
+    "role": "standard",
+    "tenure_years": 5.0,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2024-01-01"},
+      {"item": "monitor", "issued_on": "2022-04-01"}
+    ]
+  },
+  {
+    "employee_id": "E013",
+    "name": "Cameron Blake",
+    "role": "standard",
+    "tenure_years": 3.0,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2024-06-01"},
+      {"item": "keyboard", "issued_on": "2025-08-01"}
+    ]
+  },
+  {
+    "employee_id": "E014",
+    "name": "Alex Rivera",
+    "role": "standard",
+    "tenure_years": 0.1,
+    "equipment": []
+  },
+  {
+    "employee_id": "E015",
+    "name": "Dana Walsh",
+    "role": "manager",
+    "tenure_years": 2.5,
+    "equipment": [
+      {"item": "laptop", "issued_on": "2026-01-15"},
+      {"item": "monitor", "issued_on": "2026-01-15"}
+    ]
+  }
+]

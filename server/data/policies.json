@@ -1,0 +1,34 @@
+{
+  "intern": {
+    "always_escalate": false,
+    "laptop": {"eligible": false, "max_count": 0, "interval_years": null},
+    "monitor": {"eligible": false, "max_count": 0, "interval_years": null},
+    "keyboard": {"eligible": true, "max_count": 1, "interval_years": 0},
+    "mouse": {"eligible": true, "max_count": 1, "interval_years": 0},
+    "headset": {"eligible": true, "max_count": 1, "interval_years": 0}
+  },
+  "standard": {
+    "always_escalate": false,
+    "laptop": {"eligible": true, "max_count": 1, "interval_years": 4},
+    "monitor": {"eligible": true, "max_count": 1, "interval_years": 3},
+    "keyboard": {"eligible": true, "max_count": 1, "interval_years": 2},
+    "mouse": {"eligible": true, "max_count": 1, "interval_years": 2},
+    "headset": {"eligible": true, "max_count": 1, "interval_years": 2}
+  },
+  "manager": {
+    "always_escalate": false,
+    "laptop": {"eligible": true, "max_count": 1, "interval_years": 2},
+    "monitor": {"eligible": true, "max_count": 2, "interval_years": 3},
+    "keyboard": {"eligible": true, "max_count": 1, "interval_years": 0},
+    "mouse": {"eligible": true, "max_count": 1, "interval_years": 0},
+    "headset": {"eligible": true, "max_count": 1, "interval_years": 0}
+  },
+  "contractor": {
+    "always_escalate": true,
+    "laptop": {"eligible": false, "max_count": 0, "interval_years": null},
+    "monitor": {"eligible": false, "max_count": 0, "interval_years": null},
+    "keyboard": {"eligible": false, "max_count": 0, "interval_years": null},
+    "mouse": {"eligible": false, "max_count": 0, "interval_years": null},
+    "headset": {"eligible": false, "max_count": 0, "interval_years": null}
+  }
+}

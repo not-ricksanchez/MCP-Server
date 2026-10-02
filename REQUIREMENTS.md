@@ -58,9 +58,19 @@ These people must exist in mock data so later tests and demos can hit every path
 |---|---|---|
 | E001 | standard | Clear **approve** (laptop older than 4 years) |
 | E002 | standard | Clear **deny** (second monitor; already has a recent one) |
-| E004 | intern | Intern policy (peripherals only) |
+| E003 | manager | Clear **approve** (laptop older than 2 years) |
+| E004 | intern | Intern policy (no kit yet; peripherals **approve**, laptop **deny**) |
 | E005 | contractor | **Escalate** (no equipment policy) |
 | E006 | standard | **Escalate** (monitor on file with missing issue date) |
+| E007 | intern | Has keyboard already; still **approve** mouse/headset (anytime) |
+| E008 | intern | Has peripherals; laptop/monitor still **deny** |
+| E009 | manager | Already has 2 recent monitors; third monitor **deny** |
+| E010 | manager | Has 1 old monitor; second monitor **approve** |
+| E011 | standard | Laptop issued recently; laptop **deny** |
+| E012 | standard | Monitor older than 3 years; monitor **approve** |
+| E013 | standard | Keyboard issued recently; keyboard **deny** |
+| E014 | standard | New hire, no kit on file; laptop **approve** |
+| E015 | manager | Laptop issued recently; laptop **deny** |
 
 ## Tools the server must expose
 
