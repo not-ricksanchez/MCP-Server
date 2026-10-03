@@ -36,28 +36,9 @@ REACT_MODEL = os.environ.get("REACT_MODEL") or os.environ.get("OLLAMA_MODEL", "q
 REFLECT_MODEL = os.environ.get("REFLECT_MODEL", "gemma3:12b")
 MAX_STEPS = 6
 
-CATALOG = ("laptop", "monitor", "keyboard", "mouse", "headset")
-SPECIAL_RE = re.compile(
-    r"\b(?:accessib\w*|medical\w*|doctor\w*|injur\w*|disabilit\w*|legal\w*|lawyer\w*"
-    r"|security|executive\w*|exception\w*|ergonomic\w*)\b",
-    re.IGNORECASE,
-)
-ROLE_CLAIM_RE = re.compile(
-    r"\b(?:promot\w*|i(?:'m| am) (?:now )?(?:a |an |the )?(?:manager|director|executive|team lead))\b",
-    re.IGNORECASE,
-)
 EMPLOYEE_RE = re.compile(r"\bE\d{3}\b", re.IGNORECASE)
 
 ESCALATED_DRAFT = "Your request was sent to a human reviewer."
-GUARD_THOUGHTS = {
-    "missing_employee_id": "The request has no employee id, so no tool can confirm who is asking.",
-    "multiple_items": "The request asks for more than one item type; a human should split it.",
-    "eligibility_unknown": "check_request_eligibility returned unknown, so policy cannot decide this.",
-    "unverified_decision": "No check_request_eligibility result supports this decision.",
-    "special_circumstances": "The reason mentions special circumstances (medical, accessibility, legal, "
-    "security, or an exception), which policy tools cannot weigh.",
-    "role_claim": "The employee claims a role or promotion; tool data is trusted, but a human must confirm.",
-}
 
 
 @dataclass
@@ -114,33 +95,6 @@ def parse_decision(text: str) -> tuple[str | None, str]:
     if step.decision:
         return step.decision.value, step.draft or ""
     return None, step.draft or ""
-
-
-def catalog_items_in(text: str) -> list[str]:
-    lower = text.lower()
-    return [item for item in CATALOG if re.search(rf"\b{item}(?:s|es)?\b", lower)]
-
-
-def guard_reason(request: str, decision: str, statuses: list[str]) -> str | None:
-    """Escalation reason that overrides the ReAct decision, checked after the loop.
-
-    statuses are the check_request_eligibility results the loop observed.
-    """
-    if not EMPLOYEE_RE.search(request):
-        return "missing_employee_id"
-    if len(catalog_items_in(request)) > 1:
-        return "multiple_items"
-    if "unknown" in statuses:
-        return "eligibility_unknown"
-    if decision == "APPROVE" and "eligible" not in statuses:
-        return "unverified_decision"
-    if decision == "DENY" and "ineligible" not in statuses:
-        return "unverified_decision"
-    if SPECIAL_RE.search(request):
-        return "special_circumstances"
-    if ROLE_CLAIM_RE.search(request):
-        return "role_claim"
-    return None
 
 
 def default_react_model() -> OllamaAdapter:
@@ -200,7 +154,6 @@ async def run_react(
             print("Observation:", blob)
             flagged = True
 
-        statuses: list[str] = []
         messages = [
             {"role": "system", "content": system_prompt(mcp)},
             {"role": "user", "content": f"Request: {request}"},
@@ -234,8 +187,6 @@ async def run_react(
             if name == "flag_for_human_review":
                 flagged = True
                 ticket = observation
-            if name == "check_request_eligibility" and isinstance(observation.get("status"), str):
-                statuses.append(observation["status"])
             blob = json.dumps(observation, indent=2)
             observations.append(blob)
             print("Observation:", blob)
@@ -251,12 +202,8 @@ async def run_react(
             print(f"Thought: A review ticket was already filed, so {decision} cannot stand.")
             decision, draft = "ESCALATE", ESCALATED_DRAFT
 
-        guard = guard_reason(request, decision, statuses)
-        if guard and decision != "ESCALATE":
-            print(f"Thought: {GUARD_THOUGHTS[guard]}")
-            decision, draft = "ESCALATE", ESCALATED_DRAFT
         if decision == "ESCALATE":
-            await escalate(guard or "agent_escalation")
+            await escalate("agent_escalation")
 
         print("\nDecision:", decision)
         print("Draft:", draft)
@@ -268,7 +215,7 @@ async def run_react(
                 "Reflection disagrees "
                 f"(verdict={result.verdict.value}, reflected={result.decision.value}); escalating."
             )
-            await escalate("reflection_disagreement")
+            await escalate(result.reason.strip() or "reflection_disagreement")
             decision, draft = "ESCALATE", ESCALATED_DRAFT
         else:
             decision = apply_reflection(decision, result.verdict, result.decision)
