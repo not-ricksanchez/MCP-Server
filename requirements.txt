@@ -7,3 +7,4 @@ pytest>=8.0.0,<9
 # Agent (Parts 4–6): env files + Ollama on the Mac
 python-dotenv>=1.0.0,<2
 ollama>=0.4.0
+pydantic>=2.12.0,<3
