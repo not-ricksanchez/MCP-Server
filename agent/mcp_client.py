@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from types import TracebackType
+from typing import Any, Self
 
 from mcp.client import Client
 
@@ -42,13 +43,18 @@ class McpClient:
         self._inner = Client(self.url)
         self._tools: list[Any] = []
 
-    async def __aenter__(self) -> McpClient:
+    async def __aenter__(self) -> Self:
         await self._inner.__aenter__()
         await self.fetch_tools()
         return self
 
-    async def __aexit__(self, *exc: object) -> None:
-        await self._inner.__aexit__(*exc)
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        await self._inner.__aexit__(exc_type, exc, tb)
 
     async def fetch_tools(self) -> list[str]:
         listing = await self._inner.list_tools()

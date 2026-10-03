@@ -5,7 +5,13 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from agent.schemas import Outcome, ReactStep, ReflectionResult, Verdict, parse_json_object
+from agent.schemas import (
+    Outcome,
+    ReactStep,
+    ReflectionResult,
+    Verdict,
+    parse_json_object,
+)
 
 
 def test_react_action_step() -> None:

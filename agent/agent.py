@@ -18,18 +18,15 @@ from typing import Any
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
-try:
-    from agent.mcp_client import McpClient, server_url
-    from agent.model_adapter import ModelAdapter, OllamaAdapter
-    from agent.reflection import apply_reflection, decisions_disagree, reflect
-    from agent.schemas import ReactStep
-except ImportError:
-    from mcp_client import McpClient, server_url
-    from model_adapter import ModelAdapter, OllamaAdapter
-    from reflection import apply_reflection, decisions_disagree, reflect
-    from schemas import ReactStep
-
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from agent.mcp_client import McpClient, server_url
+from agent.model_adapter import ModelAdapter, OllamaAdapter
+from agent.reflection import apply_reflection, decisions_disagree, reflect
+from agent.schemas import ReactStep
+
 load_dotenv(ROOT / ".env")
 
 MCP_SERVER_URL = server_url()
@@ -41,9 +38,9 @@ MAX_STEPS = 6
 CATALOG = ("laptop", "monitor", "keyboard", "mouse", "headset")
 SPECIAL_RE = re.compile(
     r"\b(accessib|medical|doctor|injury|legal|security|executive|exception|ada|ergonomic)\w*\b",
-    re.I,
+    re.IGNORECASE,
 )
-EMPLOYEE_RE = re.compile(r"\bE\d{3}\b", re.I)
+EMPLOYEE_RE = re.compile(r"\bE\d{3}\b", re.IGNORECASE)
 
 
 @dataclass
@@ -79,7 +76,7 @@ When you have enough observations to decide:
 def parse_action(text: str) -> tuple[str | None, dict[str, Any]]:
     try:
         step = ReactStep.from_output(text)
-    except (ValueError, ValidationError):
+    except (TypeError, ValueError, ValidationError):
         return None, {}
     if step.action:
         return step.action, step.action_input
@@ -91,7 +88,7 @@ def parse_action(text: str) -> tuple[str | None, dict[str, Any]]:
 def parse_decision(text: str) -> tuple[str | None, str]:
     try:
         step = ReactStep.from_output(text)
-    except (ValueError, ValidationError):
+    except (TypeError, ValueError, ValidationError):
         return None, ""
     if step.decision:
         return step.decision.value, step.draft or ""
@@ -126,7 +123,7 @@ async def run_one_shot(request: str) -> None:
     match = EMPLOYEE_RE.search(request)
     employee_id = match.group(0).upper() if match else "E001"
     print(f"Thought: Look up employee {employee_id} before judging the request.")
-    print(f"Action: get_employee_info")
+    print("Action: get_employee_info")
     print(f"Action Input: {json.dumps({'employee_id': employee_id})}")
     async with McpClient(MCP_SERVER_URL) as client:
         print("MCP tools:", client.tools_list)
@@ -144,6 +141,10 @@ async def run_react(
     items = catalog_items_in(request)
     employee_match = EMPLOYEE_RE.search(request)
     trace: list[str] = []
+    decision: str | None = None
+    draft = ""
+    ticket: dict[str, Any] | None = None
+    flagged = False
 
     async with McpClient(MCP_SERVER_URL) as mcp:
         print("MCP tools:", mcp.tools_list)
@@ -167,7 +168,8 @@ async def run_react(
                 "flag_for_human_review",
                 {"employee_id": employee_id, "request": request, "reason": reason},
             )
-            decision, draft = "ESCALATE", (
+            decision = "ESCALATE"
+            draft = (
                 "This request was sent to a human reviewer because it cannot be decided from policy tools alone."
             )
             print("Thought: The request is missing an id, lists multiple items, or is out of catalog.")
@@ -178,11 +180,6 @@ async def run_react(
             result = reflect(reflect_model, request, [json.dumps(ticket)], decision, draft)
             print("Final draft:", result.draft)
             return AgentRun(decision=decision, draft=result.draft, flagged=True, ticket=ticket)
-
-        flagged = False
-        decision: str | None = None
-        draft = ""
-        ticket: dict[str, Any] | None = None
 
         for step in range(MAX_STEPS):
             text = model.complete(messages, schema=ReactStep)
@@ -203,8 +200,10 @@ async def run_react(
                 )
                 continue
             if name == "finish":
-                decision = args.get("decision")
-                draft = args.get("draft") or ""
+                raw_decision = args.get("decision")
+                decision = raw_decision if isinstance(raw_decision, str) else None
+                raw_draft = args.get("draft")
+                draft = raw_draft if isinstance(raw_draft, str) else ""
                 break
             observation = await mcp.call_tool(name, args)
             if name == "flag_for_human_review":

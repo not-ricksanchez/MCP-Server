@@ -4,12 +4,8 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-try:
-    from agent.model_adapter import ModelAdapter
-    from agent.schemas import Outcome, ReflectionResult, Verdict
-except ImportError:
-    from model_adapter import ModelAdapter
-    from schemas import Outcome, ReflectionResult, Verdict
+from agent.model_adapter import ModelAdapter
+from agent.schemas import Outcome, ReflectionResult, Verdict
 
 REFLECT_SYSTEM = """You review the ReAct agent's Decision AND Draft against tool Observations.
 
@@ -50,9 +46,7 @@ def decisions_disagree(
     if _as_verdict(verdict) == Verdict.DISAGREE.value:
         return True
     reflected = _as_outcome(reflected_decision)
-    if reflected and reflected != str(react_decision).upper():
-        return True
-    return False
+    return bool(reflected) and reflected != str(react_decision).upper()
 
 
 def apply_reflection(
@@ -92,7 +86,7 @@ def reflect(
     print(text)
     try:
         result = ReflectionResult.from_output(text)
-    except (ValueError, ValidationError) as exc:
+    except (TypeError, ValueError, ValidationError) as exc:
         print(f"reflection JSON invalid ({exc}); treating as AGREE with original draft")
         try:
             fallback_decision = Outcome(str(decision).upper())

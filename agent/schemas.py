@@ -24,7 +24,7 @@ class Verdict(str, Enum):
 def parse_json_object(text: str) -> dict[str, Any]:
     raw = text.strip()
     if raw.startswith("```"):
-        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.I)
+        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
         raw = re.sub(r"\s*```$", "", raw)
     try:
         data = json.loads(raw)
@@ -34,7 +34,7 @@ def parse_json_object(text: str) -> dict[str, Any]:
             raise
         data = json.loads(raw[start : end + 1])
     if not isinstance(data, dict):
-        raise ValueError("model output was not a JSON object")
+        raise TypeError("model output was not a JSON object")
     return data
 
 

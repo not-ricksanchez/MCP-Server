@@ -89,7 +89,7 @@ def check_request_eligibility(
     as_of: date | None = None,
 ) -> dict[str, Any]:
     """Return eligible, ineligible, or unknown. Does not decide approve/deny/escalate."""
-    as_of = as_of or date.today()
+    as_of = as_of or datetime.now(timezone.utc).date()
     normalized = _normalize_item(item)
     facts: dict[str, Any] = {"as_of": as_of.isoformat()}
 

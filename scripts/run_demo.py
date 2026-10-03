@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 load_dotenv(ROOT / ".env")
 
-from agent.agent import (  # noqa: E402
+from agent.agent import (
     MCP_SERVER_URL,
     OLLAMA_HOST,
     REACT_MODEL,
