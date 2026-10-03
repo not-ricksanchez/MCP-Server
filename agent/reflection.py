@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from pydantic import ValidationError
 
 from agent.model_adapter import ModelAdapter
@@ -58,6 +60,34 @@ def apply_reflection(
     if decisions_disagree(react_decision, verdict, reflected_decision):
         return Outcome.ESCALATE.value
     return str(react_decision).upper()
+
+
+_NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
+
+
+def _numbers(text: str) -> set[str]:
+    """Numeric tokens with leading zeros dropped, so 2019-06-01 also supports "June 1, 2019"."""
+    return {token.lstrip("0") or "0" for token in _NUMBER_RE.findall(text)}
+
+
+def unsupported_numbers(draft: str, sources: list[str]) -> set[str]:
+    """Numbers or date parts in the draft that appear in none of the sources."""
+    supported: set[str] = set()
+    for source in sources:
+        supported |= _numbers(source)
+    return _numbers(draft) - supported
+
+
+def choose_draft(original: str, reflected: str, request: str, observations: list[str]) -> str:
+    """Use the critic's rewrite only when it adds no numbers or dates the tools did not return."""
+    if not reflected.strip():
+        print("Reflected draft is empty; keeping the ReAct draft.")
+        return original
+    unsupported = unsupported_numbers(reflected, [request, *observations])
+    if unsupported:
+        print(f"Reflected draft cites {sorted(unsupported)} not found in Observations; keeping the ReAct draft.")
+        return original
+    return reflected
 
 
 def reflect(

@@ -11,6 +11,7 @@ import json
 import os
 import re
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,7 @@ if str(ROOT) not in sys.path:
 
 from agent.mcp_client import McpClient, server_url
 from agent.model_adapter import ModelAdapter, OllamaAdapter
-from agent.reflection import apply_reflection, decisions_disagree, reflect
+from agent.reflection import apply_reflection, choose_draft, decisions_disagree, reflect
 from agent.schemas import ReactStep
 
 load_dotenv(ROOT / ".env")
@@ -37,10 +38,26 @@ MAX_STEPS = 6
 
 CATALOG = ("laptop", "monitor", "keyboard", "mouse", "headset")
 SPECIAL_RE = re.compile(
-    r"\b(accessib|medical|doctor|injury|legal|security|executive|exception|ada|ergonomic)\w*\b",
+    r"\b(?:accessib\w*|medical\w*|doctor\w*|injur\w*|disabilit\w*|legal\w*|lawyer\w*"
+    r"|security|executive\w*|exception\w*|ergonomic\w*)\b",
+    re.IGNORECASE,
+)
+ROLE_CLAIM_RE = re.compile(
+    r"\b(?:promot\w*|i(?:'m| am) (?:now )?(?:a |an |the )?(?:manager|director|executive|team lead))\b",
     re.IGNORECASE,
 )
 EMPLOYEE_RE = re.compile(r"\bE\d{3}\b", re.IGNORECASE)
+
+ESCALATED_DRAFT = "Your request was sent to a human reviewer."
+GUARD_THOUGHTS = {
+    "missing_employee_id": "The request has no employee id, so no tool can confirm who is asking.",
+    "multiple_items": "The request asks for more than one item type; a human should split it.",
+    "eligibility_unknown": "check_request_eligibility returned unknown, so policy cannot decide this.",
+    "unverified_decision": "No check_request_eligibility result supports this decision.",
+    "special_circumstances": "The reason mentions special circumstances (medical, accessibility, legal, "
+    "security, or an exception), which policy tools cannot weigh.",
+    "role_claim": "The employee claims a role or promotion; tool data is trusted, but a human must confirm.",
+}
 
 
 @dataclass
@@ -49,6 +66,9 @@ class AgentRun:
     draft: str
     flagged: bool
     ticket: dict[str, Any] | None = None
+    react_seconds: float = 0.0
+    reflect_seconds: float = 0.0
+    total_seconds: float = 0.0
 
 SYSTEM = """You handle internal IT equipment requests. You are a ReAct agent.
 
@@ -63,7 +83,8 @@ Call flag_for_human_review when the case is ambiguous or needs a human. Do NOT c
 Rules:
 - Approve only if check_request_eligibility status is eligible and the reason is ordinary.
 - Deny only if status is ineligible and the reason is ordinary. Do not flag a clear deny.
-- Escalate (call flag_for_human_review) if: unknown employee, item not in catalog (laptop, monitor, keyboard, mouse, headset), contractor, status unknown, medical/accessibility/legal/security/exception language, missing employee id, two different items in one request, or ineligible plus special circumstances.
+- Escalate (call flag_for_human_review) if: unknown employee, item not in catalog (laptop, monitor, keyboard, mouse, headset), contractor, status unknown, medical/accessibility/legal/security/exception language, missing employee id, two different items in one request, ineligible plus special circumstances, or the employee claims a role or promotion (trust tool data, then escalate).
+- When you call flag_for_human_review, finish next with decision ESCALATE.
 
 Each turn respond with a JSON object only:
 {"thought": "<one sentence>", "action": "<tool name>", "action_input": {<args>}, "decision": null, "draft": null}
@@ -96,14 +117,30 @@ def parse_decision(text: str) -> tuple[str | None, str]:
 
 
 def catalog_items_in(text: str) -> list[str]:
-    found: list[str] = []
     lower = text.lower()
-    for item in CATALOG:
-        if re.search(rf"\b{item}\b", lower) and item not in found:
-            found.append(item)
-    if "desk" in lower and "standing" in lower and "monitor" not in found:
-        found.append("standing desk")
-    return found
+    return [item for item in CATALOG if re.search(rf"\b{item}(?:s|es)?\b", lower)]
+
+
+def guard_reason(request: str, decision: str, statuses: list[str]) -> str | None:
+    """Escalation reason that overrides the ReAct decision, checked after the loop.
+
+    statuses are the check_request_eligibility results the loop observed.
+    """
+    if not EMPLOYEE_RE.search(request):
+        return "missing_employee_id"
+    if len(catalog_items_in(request)) > 1:
+        return "multiple_items"
+    if "unknown" in statuses:
+        return "eligibility_unknown"
+    if decision == "APPROVE" and "eligible" not in statuses:
+        return "unverified_decision"
+    if decision == "DENY" and "ineligible" not in statuses:
+        return "unverified_decision"
+    if SPECIAL_RE.search(request):
+        return "special_circumstances"
+    if ROLE_CLAIM_RE.search(request):
+        return "role_claim"
+    return None
 
 
 def default_react_model() -> OllamaAdapter:
@@ -136,56 +173,42 @@ async def run_react(
     model: ModelAdapter | None = None,
     reflect_model: ModelAdapter | None = None,
 ) -> AgentRun:
+    started = time.perf_counter()
     model = model or default_react_model()
     reflect_model = reflect_model or default_reflect_model()
-    items = catalog_items_in(request)
     employee_match = EMPLOYEE_RE.search(request)
-    trace: list[str] = []
+    employee_id = employee_match.group(0).upper() if employee_match else "UNKNOWN"
     decision: str | None = None
     draft = ""
     ticket: dict[str, Any] | None = None
     flagged = False
+    observations: list[str] = []
 
     async with McpClient(MCP_SERVER_URL) as mcp:
         print("MCP tools:", mcp.tools_list)
-        observations: list[str] = []
+
+        async def escalate(reason: str) -> None:
+            nonlocal ticket, flagged
+            if flagged:
+                return
+            args = {"employee_id": employee_id, "request": request, "reason": reason}
+            print("Action: flag_for_human_review")
+            print(f"Action Input: {json.dumps(args)}")
+            ticket = await mcp.call_tool("flag_for_human_review", args)
+            blob = json.dumps(ticket, indent=2)
+            observations.append(blob)
+            print("Observation:", blob)
+            flagged = True
+
+        statuses: list[str] = []
         messages = [
             {"role": "system", "content": system_prompt(mcp)},
             {"role": "user", "content": f"Request: {request}"},
         ]
-
-        catalog_hits = [item for item in items if item in CATALOG]
-        out_of_catalog = [item for item in items if item not in CATALOG]
-        if not employee_match or len(catalog_hits) > 1 or out_of_catalog:
-            if not employee_match:
-                reason = "missing_employee_id"
-            elif out_of_catalog:
-                reason = "unknown_item"
-            else:
-                reason = "multiple_items"
-            employee_id = employee_match.group(0).upper() if employee_match else "UNKNOWN"
-            ticket = await mcp.call_tool(
-                "flag_for_human_review",
-                {"employee_id": employee_id, "request": request, "reason": reason},
-            )
-            decision = "ESCALATE"
-            draft = (
-                "This request was sent to a human reviewer because it cannot be decided from policy tools alone."
-            )
-            print("Thought: The request is missing an id, lists multiple items, or is out of catalog.")
-            print("Action: flag_for_human_review")
-            print("Observation:", json.dumps(ticket, indent=2))
-            print("Decision: ESCALATE")
-            print("Draft:", draft)
-            result = reflect(reflect_model, request, [json.dumps(ticket)], decision, draft)
-            print("Final draft:", result.draft)
-            return AgentRun(decision=decision, draft=result.draft, flagged=True, ticket=ticket)
-
         for step in range(MAX_STEPS):
             text = model.complete(messages, schema=ReactStep)
             print(f"\n--- step {step + 1} ---")
             print(text)
-            trace.append(text)
             name, args = parse_action(text)
             if name is None:
                 messages.append({"role": "assistant", "content": text})
@@ -205,10 +228,14 @@ async def run_react(
                 raw_draft = args.get("draft")
                 draft = raw_draft if isinstance(raw_draft, str) else ""
                 break
+            if name == "flag_for_human_review":
+                args = {**args, "request": request}
             observation = await mcp.call_tool(name, args)
             if name == "flag_for_human_review":
                 flagged = True
                 ticket = observation
+            if name == "check_request_eligibility" and isinstance(observation.get("status"), str):
+                statuses.append(observation["status"])
             blob = json.dumps(observation, indent=2)
             observations.append(blob)
             print("Observation:", blob)
@@ -216,64 +243,57 @@ async def run_react(
             messages.append({"role": "user", "content": f"Observation:\n{blob}"})
 
         if decision is None:
-            decision, draft = "ESCALATE", "Could not finish the ReAct loop; sent to a reviewer."
-            if not flagged:
-                ticket = await mcp.call_tool(
-                    "flag_for_human_review",
-                    {
-                        "employee_id": employee_match.group(0).upper(),
-                        "request": request,
-                        "reason": "react_loop_exhausted",
-                    },
-                )
-                print("Action: flag_for_human_review")
-                print("Observation:", json.dumps(ticket, indent=2))
-                observations.append(json.dumps(ticket))
-                flagged = True
+            print("Thought: The ReAct loop ran out of steps without a decision.")
+            decision, draft = "ESCALATE", ESCALATED_DRAFT
+            await escalate("react_loop_exhausted")
 
-        if decision == "ESCALATE" and not flagged:
-            ticket = await mcp.call_tool(
-                "flag_for_human_review",
-                {
-                    "employee_id": employee_match.group(0).upper(),
-                    "request": request,
-                    "reason": "agent_escalation",
-                },
-            )
-            print("Action: flag_for_human_review")
-            print("Observation:", json.dumps(ticket, indent=2))
-            observations.append(json.dumps(ticket))
-            flagged = True
+        if flagged and decision != "ESCALATE":
+            print(f"Thought: A review ticket was already filed, so {decision} cannot stand.")
+            decision, draft = "ESCALATE", ESCALATED_DRAFT
+
+        guard = guard_reason(request, decision, statuses)
+        if guard and decision != "ESCALATE":
+            print(f"Thought: {GUARD_THOUGHTS[guard]}")
+            decision, draft = "ESCALATE", ESCALATED_DRAFT
+        if decision == "ESCALATE":
+            await escalate(guard or "agent_escalation")
 
         print("\nDecision:", decision)
         print("Draft:", draft)
-        react_decision = decision or "ESCALATE"
-        result = reflect(reflect_model, request, observations, react_decision, draft)
-        draft = result.draft
-        if decisions_disagree(react_decision, result.verdict, result.decision):
+        reflect_started = time.perf_counter()
+        result = reflect(reflect_model, request, observations, decision, draft)
+        reflect_ended = time.perf_counter()
+        if decisions_disagree(decision, result.verdict, result.decision):
             print(
                 "Reflection disagrees "
                 f"(verdict={result.verdict.value}, reflected={result.decision.value}); escalating."
             )
-            if not flagged:
-                ticket = await mcp.call_tool(
-                    "flag_for_human_review",
-                    {
-                        "employee_id": employee_match.group(0).upper(),
-                        "request": request,
-                        "reason": "reflection_disagreement",
-                    },
-                )
-                print("Action: flag_for_human_review")
-                print("Observation:", json.dumps(ticket, indent=2))
-                flagged = True
-            decision = "ESCALATE"
+            await escalate("reflection_disagreement")
+            decision, draft = "ESCALATE", ESCALATED_DRAFT
         else:
-            decision = apply_reflection(react_decision, result.verdict, result.decision)
+            decision = apply_reflection(decision, result.verdict, result.decision)
             print("Reflection agrees; keeping Decision:", decision)
+            draft = choose_draft(draft, result.draft, request, observations)
         print("Final decision:", decision)
         print("Final draft:", draft)
-        return AgentRun(decision=decision or "ESCALATE", draft=draft, flagged=flagged, ticket=ticket)
+        return _finish_run(
+            AgentRun(decision=decision, draft=draft, flagged=flagged, ticket=ticket),
+            started,
+            reflect_started,
+            reflect_ended,
+        )
+
+
+def _finish_run(run: AgentRun, started: float, reflect_started: float, reflect_ended: float) -> AgentRun:
+    """Fill latencies. ReAct covers everything except the reflection model call."""
+    run.total_seconds = time.perf_counter() - started
+    run.reflect_seconds = reflect_ended - reflect_started
+    run.react_seconds = run.total_seconds - run.reflect_seconds
+    print(
+        f"Latency: react={run.react_seconds:.2f}s  reflection={run.reflect_seconds:.2f}s  "
+        f"combined={run.total_seconds:.2f}s"
+    )
+    return run
 
 
 async def main() -> None:
