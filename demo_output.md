@@ -1,20 +1,20 @@
 # Demo output
 
-Run at 2026-10-03T01:52:22+00:00  
+Run at 2026-10-03T02:45:02+00:00  
 ReAct model: `qwen3:8b` · Reflection model: `gemma3:12b`
 
 ## Summary
 
 | # | Case | Expected | Got | Match | Flagged | ReAct (s) | Reflection (s) | Combined (s) |
 |---|---|---|---|---|---|---|---|---|
-| 1 | approve | APPROVE | APPROVE | yes | False | 21.48 | 22.09 | 43.57 |
-| 2 | deny | DENY | DENY | yes | False | 20.74 | 23.12 | 43.86 |
-| 3 | escalate-contractor | ESCALATE | ESCALATE | yes | True | 21.21 | 17.12 | 38.32 |
-| 4 | escalate-unknown-item | ESCALATE | ESCALATE | yes | True | 22.46 | 18.74 | 41.20 |
-| 5 | escalate-missing-date | ESCALATE | ESCALATE | yes | True | 29.34 | 21.78 | 51.13 |
-| 6 | escalate-special | ESCALATE | ESCALATE | yes | True | 23.08 | 22.33 | 45.41 |
-| | **total** | | | | | 138.31 | 125.17 | 263.48 |
-| | **mean** | | | | | 23.05 | 20.86 | 43.91 |
+| 1 | approve | APPROVE | APPROVE | yes | False | 22.56 | 21.70 | 44.25 |
+| 2 | deny | DENY | DENY | yes | False | 22.29 | 20.32 | 42.61 |
+| 3 | escalate-contractor | ESCALATE | ESCALATE | yes | True | 23.35 | 16.68 | 40.03 |
+| 4 | escalate-unknown-item | ESCALATE | ESCALATE | yes | True | 28.29 | 19.32 | 47.61 |
+| 5 | escalate-missing-date | ESCALATE | ESCALATE | yes | True | 30.78 | 20.80 | 51.58 |
+| 6 | escalate-special | ESCALATE | ESCALATE | yes | True | 24.36 | 18.55 | 42.91 |
+| | **total** | | | | | 151.62 | 117.37 | 268.99 |
+| | **mean** | | | | | 25.27 | 19.56 | 44.83 |
 
 ReAct latency covers the MCP connection, every model step, and every tool call. Reflection latency is the reflection model call only. Combined is the whole request end to end.
 
@@ -25,46 +25,46 @@ ReAct latency covers the MCP connection, every model step, and every tool call. 
 - Request: E001: my laptop is 4 years old and slow, can I get a replacement?
 - Why: standard employee, laptop older than 4-year refresh
 - Decision: APPROVE (expected APPROVE)
-- Final draft: Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in June 2019, has exceeded the 4-year refresh interval.
+- Final draft: Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in 2019, has exceeded the 4-year refresh interval.
 
 ### 2. deny
 
 - Request: E002: I would like a second monitor for my desk.
 - Why: standard employee's only monitor was issued under 3 years ago (refresh interval not met)
 - Decision: DENY (expected DENY)
-- Final draft: DENY: The request for a second monitor is ineligible because the refresh interval of 3 years has not been met. Your current monitor was issued on 2025-01-10.
+- Final draft: The request for a second monitor is ineligible because the refresh interval of 3 years has not been met. Your current monitor was issued on January 10, 2025.
 
 ### 3. escalate-contractor
 
 - Request: E005: I need a laptop for this contract.
 - Why: contractor has no equipment policy
 - Decision: ESCALATE (expected ESCALATE)
-- Final draft: Request for a laptop by contractor E005 has been escalated for review due to policy restrictions.
-- Ticket: `ESC-6e37d162` reason `Contractors are not eligible for laptops per policy.`
+- Final draft: Request for laptop by contractor E005 is escalated for review as contractors are not eligible for laptops per policy.
+- Ticket: `ESC-6ec2897e` reason `Contractors are not eligible for laptops per policy.`
 
 ### 4. escalate-unknown-item
 
 - Request: E001: my back hurts, can I get a standing desk?
 - Why: standing desk is out of catalog (also medical language)
 - Decision: ESCALATE (expected ESCALATE)
-- Final draft: Request for a standing desk has been escalated to a human reviewer because it is not listed in the equipment catalog.
-- Ticket: `ESC-72d8601f` reason `Item not in catalog`
+- Final draft: The request for a standing desk has been escalated to a human reviewer because it is not a standard catalog item and the requestor mentioned back pain.
+- Ticket: `ESC-c1122a93` reason `item not in catalog`
 
 ### 5. escalate-missing-date
 
 - Request: E006: my monitor flickers constantly, can I get a replacement?
 - Why: monitor on file has no issue date, so eligibility is unknown
 - Decision: ESCALATE (expected ESCALATE)
-- Final draft: The request for a monitor replacement is being escalated for further review due to a missing issue date.
-- Ticket: `ESC-427a424b` reason `missing_issue_date`
+- Final draft: Request for replacement of flickering monitor (E006) is being escalated due to a missing issue date.
+- Ticket: `ESC-c285cafb` reason `missing_issue_date`
 
 ### 6. escalate-special
 
 - Request: E011: my doctor says I need a lighter laptop because of a wrist injury.
 - Why: laptop is ineligible (recent issue) but the reason is medical
 - Decision: ESCALATE (expected ESCALATE)
-- Final draft: Your request for a lighter laptop has been escalated for review due to a doctor's recommendation regarding a wrist injury.
-- Ticket: `ESC-8c5ad0c3` reason `special_circumstances`
+- Final draft: Your request was sent to a human reviewer.
+- Ticket: `ESC-375987c6` reason `Medical needs (doctor, injury, disability)`
 
 ## Full trace
 
@@ -203,17 +203,17 @@ Observation: {
 }
 
 --- step 4 ---
-{"thought": "The request is eligible based on the policy and observations.", "action": null, "action_input": {}, "decision": "APPROVE", "draft": "Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in June 2019, has exceeded the 4-year refresh interval."}
+{"thought": "The request is eligible for a laptop replacement as the refresh interval has been met.", "action": null, "action_input": {}, "decision": "APPROVE", "draft": "Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in 2019, has exceeded the 4-year refresh interval."}
 
 Decision: APPROVE
-Draft: Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in June 2019, has exceeded the 4-year refresh interval.
+Draft: Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in 2019, has exceeded the 4-year refresh interval.
 
 --- reflection ---
-{"verdict": "AGREE", "decision": "APPROVE", "draft": "Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in June 2019, has exceeded the 4-year refresh interval.", "reason": "The Decision aligns with the Observation that the laptop is eligible based on the refresh interval policy."}
+{"verdict": "AGREE", "decision": "APPROVE", "draft": "Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in 2019, has exceeded the 4-year refresh interval.", "reason": "refresh_interval_met"}
 Reflection agrees; keeping Decision: APPROVE
 Final decision: APPROVE
-Final draft: Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in June 2019, has exceeded the 4-year refresh interval.
-Latency: react=21.48s  reflection=22.09s  combined=43.57s
+Final draft: Avery Chen (E001) is eligible for a laptop replacement as their current laptop, issued in 2019, has exceeded the 4-year refresh interval.
+Latency: react=22.56s  reflection=21.70s  combined=44.25s
 Result: APPROVE  flagged=False  match=True
 
 ========================================================================
@@ -244,7 +244,7 @@ Observation: {
 }
 
 --- step 2 ---
-{"thought": "Need to check policy limits for the 'standard' role.", "action": "get_policy_limits", "action_input": {"role": "standard"}, "decision": null, "draft": null}
+{"thought": "Check policy limits for the 'standard' role to determine eligibility for a second monitor.", "action": "get_policy_limits", "action_input": {"role": "standard"}, "decision": null, "draft": null}
 Observation: {
   "found": true,
   "role": "standard",
@@ -279,7 +279,7 @@ Observation: {
 }
 
 --- step 3 ---
-{"thought": "Check if the request for a second monitor is eligible based on policy and current equipment.", "action": "check_request_eligibility", "action_input": {"employee_id": "E002", "item": "monitor"}, "decision": null, "draft": null}
+{"thought": "Check if the request for a second monitor is eligible based on the policy limits for the 'standard' role.", "action": "check_request_eligibility", "action_input": {"employee_id": "E002", "item": "monitor"}, "decision": null, "draft": null}
 Observation: {
   "status": "ineligible",
   "employee_id": "E002",
@@ -345,17 +345,17 @@ Observation: {
 }
 
 --- step 4 ---
-{"thought": "The request is ineligible because the refresh interval for a monitor has not been met.", "action": null, "action_input": {}, "decision": "DENY", "draft": "DENY: The request for a second monitor is ineligible as the refresh interval of 3 years has not been met."}
+{"thought": "The request for a second monitor is ineligible because the refresh interval has not been met.", "action": null, "action_input": {}, "decision": "DENY", "draft": "The request for a second monitor is ineligible as the refresh interval of 3 years has not been met."}
 
 Decision: DENY
-Draft: DENY: The request for a second monitor is ineligible as the refresh interval of 3 years has not been met.
+Draft: The request for a second monitor is ineligible as the refresh interval of 3 years has not been met.
 
 --- reflection ---
-{"verdict": "AGREE", "decision": "DENY", "draft": "DENY: The request for a second monitor is ineligible because the refresh interval of 3 years has not been met. Your current monitor was issued on 2025-01-10.", "reason": "The Decision aligns with the Observations. The monitor refresh interval is 3 years, and the employee's current monitor was issued less than 3 years ago, making the request ineligible. The draft was updated to include the issued on date to be more informative."}
+{"verdict": "AGREE", "decision": "DENY", "draft": "The request for a second monitor is ineligible because the refresh interval of 3 years has not been met. Your current monitor was issued on January 10, 2025.", "reason": "ordinary"}
 Reflection agrees; keeping Decision: DENY
 Final decision: DENY
-Final draft: DENY: The request for a second monitor is ineligible because the refresh interval of 3 years has not been met. Your current monitor was issued on 2025-01-10.
-Latency: react=20.74s  reflection=23.12s  combined=43.86s
+Final draft: The request for a second monitor is ineligible because the refresh interval of 3 years has not been met. Your current monitor was issued on January 10, 2025.
+Latency: react=22.29s  reflection=20.32s  combined=42.61s
 Result: DENY  flagged=False  match=True
 
 ========================================================================
@@ -412,34 +412,29 @@ Observation: {
 }
 
 --- step 3 ---
-{"thought": "Contractors are not eligible for laptops per policy. Need to escalate.", "action": "flag_for_human_review", "action_input": {"employee_id": "E005", "request": "laptop", "reason": "Contractors are not eligible for laptops per policy."}, "decision": "ESCALATE", "draft": "Request for laptop by contractor E005 is escalated for review due to policy restrictions."}
+{"thought": "Contractors are not eligible for laptops per policy. Need to escalate.", "action": "flag_for_human_review", "action_input": {"employee_id": "E005", "request": "laptop", "reason": "Contractors are not eligible for laptops per policy."}, "decision": "ESCALATE", "draft": "Request for laptop by contractor E005 is escalated for review as contractors are not eligible for laptops per policy."}
 Observation: {
-  "ticket_id": "ESC-6e37d162",
+  "ticket_id": "ESC-6ec2897e",
   "employee_id": "E005",
   "request": "E005: I need a laptop for this contract.",
   "reason": "Contractors are not eligible for laptops per policy.",
-  "timestamp": "2026-10-03T01:49:43.307246+00:00",
+  "timestamp": "2026-10-03T02:42:19.516580+00:00",
   "escalated": true
 }
 
 --- step 4 ---
-{"thought": "Request has been successfully escalated for review.", "action": null, "action_input": {}, "decision": "ESCALATE", "draft": "Request for laptop by contractor E005 is escalated for review due to policy restrictions."}
+{"thought": "Request has been successfully escalated for review.", "action": null, "action_input": {}, "decision": "ESCALATE", "draft": "Request for laptop by contractor E005 is escalated for review as contractors are not eligible for laptops per policy."}
 
 Decision: ESCALATE
-Draft: Request for laptop by contractor E005 is escalated for review due to policy restrictions.
+Draft: Request for laptop by contractor E005 is escalated for review as contractors are not eligible for laptops per policy.
 
 --- reflection ---
-{
-  "verdict": "AGREE",
-  "decision": "ESCALATE",
-  "draft": "Request for a laptop by contractor E005 has been escalated for review due to policy restrictions.",
-  "reason": "The Decision matches the Observations. Contractors are ineligible for laptops per policy, requiring escalation."
-}
+{"verdict": "AGREE", "decision": "ESCALATE", "draft": "Request for laptop by contractor E005 is escalated for review as contractors are not eligible for laptops per policy.", "reason": "Special circumstance: contractor requesting equipment"}
 Reflection agrees; keeping Decision: ESCALATE
 Final decision: ESCALATE
-Final draft: Request for a laptop by contractor E005 has been escalated for review due to policy restrictions.
-Latency: react=21.21s  reflection=17.12s  combined=38.32s
-Ticket: {'ticket_id': 'ESC-6e37d162', 'employee_id': 'E005', 'request': 'E005: I need a laptop for this contract.', 'reason': 'Contractors are not eligible for laptops per policy.', 'timestamp': '2026-10-03T01:49:43.307246+00:00', 'escalated': True}
+Final draft: Request for laptop by contractor E005 is escalated for review as contractors are not eligible for laptops per policy.
+Latency: react=23.35s  reflection=16.68s  combined=40.03s
+Ticket: {'ticket_id': 'ESC-6ec2897e', 'employee_id': 'E005', 'request': 'E005: I need a laptop for this contract.', 'reason': 'Contractors are not eligible for laptops per policy.', 'timestamp': '2026-10-03T02:42:19.516580+00:00', 'escalated': True}
 Result: ESCALATE  flagged=True  match=True
 
 ========================================================================
@@ -470,7 +465,7 @@ Observation: {
 }
 
 --- step 2 ---
-{"thought": "Need to check policy limits for role 'standard' to determine eligibility for a standing desk.", "action": "get_policy_limits", "action_input": {"role": "standard"}, "decision": null, "draft": null}
+{"thought": "Check policy limits for the role 'standard' to determine eligibility for a standing desk.", "action": "get_policy_limits", "action_input": {"role": "standard"}, "decision": null, "draft": null}
 Observation: {
   "found": true,
   "role": "standard",
@@ -505,29 +500,41 @@ Observation: {
 }
 
 --- step 3 ---
-{"thought": "Standing desk is not in the policy catalog. Escalate to human review due to item not in catalog.", "action": "flag_for_human_review", "action_input": {"employee_id": "E001", "request": "Standing desk", "reason": "Item not in catalog"}, "decision": "ESCALATE", "draft": "Request for a standing desk is not covered under the current policy catalog. Escalating to a human reviewer for further assessment."}
+{"thought": "Check if a standing desk is eligible under the policy for the role 'standard'.", "action": "check_request_eligibility", "action_input": {"employee_id": "E001", "item": "standing desk"}, "decision": null, "draft": null}
 Observation: {
-  "ticket_id": "ESC-72d8601f",
+  "status": "unknown",
   "employee_id": "E001",
-  "request": "E001: my back hurts, can I get a standing desk?",
-  "reason": "Item not in catalog",
-  "timestamp": "2026-10-03T01:50:22.390214+00:00",
-  "escalated": true
+  "item": "standing desk",
+  "reason": "unknown_item",
+  "facts_used": {
+    "as_of": "2026-10-03"
+  }
 }
 
 --- step 4 ---
-{"thought": "Request has been successfully escalated to a human reviewer.", "action": null, "action_input": {}, "decision": "ESCALATE", "draft": "Request for a standing desk has been escalated to a human reviewer due to the item not being in the policy catalog."}
+{"thought": "The request for a standing desk is not covered by the policy catalog. Escalate to a human reviewer.", "action": "flag_for_human_review", "action_input": {"employee_id": "E001", "request": "standing desk", "reason": "item not in catalog"}, "decision": "ESCALATE", "draft": "The request for a standing desk is not covered by the policy catalog. Escalate to a human reviewer."}
+Observation: {
+  "ticket_id": "ESC-c1122a93",
+  "employee_id": "E001",
+  "request": "E001: my back hurts, can I get a standing desk?",
+  "reason": "item not in catalog",
+  "timestamp": "2026-10-03T02:43:04.328831+00:00",
+  "escalated": true
+}
+
+--- step 5 ---
+{"thought": "The request has been successfully escalated to a human reviewer.", "action": null, "action_input": {}, "decision": "ESCALATE", "draft": "The request for a standing desk has been escalated to a human reviewer due to the item not being in the catalog."}
 
 Decision: ESCALATE
-Draft: Request for a standing desk has been escalated to a human reviewer due to the item not being in the policy catalog.
+Draft: The request for a standing desk has been escalated to a human reviewer due to the item not being in the catalog.
 
 --- reflection ---
-{"verdict": "AGREE", "decision": "ESCALATE", "draft": "Request for a standing desk has been escalated to a human reviewer because it is not listed in the equipment catalog.", "reason": "The Decision aligns with the Observations, which state the item (standing desk) is not in the catalog, justifying escalation. The Draft accurately reflects this reason without inventing dates or SLAs."}
+{"verdict": "AGREE", "decision": "ESCALATE", "draft": "The request for a standing desk has been escalated to a human reviewer because it is not a standard catalog item and the requestor mentioned back pain.", "reason": "medical needs"}
 Reflection agrees; keeping Decision: ESCALATE
 Final decision: ESCALATE
-Final draft: Request for a standing desk has been escalated to a human reviewer because it is not listed in the equipment catalog.
-Latency: react=22.46s  reflection=18.74s  combined=41.20s
-Ticket: {'ticket_id': 'ESC-72d8601f', 'employee_id': 'E001', 'request': 'E001: my back hurts, can I get a standing desk?', 'reason': 'Item not in catalog', 'timestamp': '2026-10-03T01:50:22.390214+00:00', 'escalated': True}
+Final draft: The request for a standing desk has been escalated to a human reviewer because it is not a standard catalog item and the requestor mentioned back pain.
+Latency: react=28.29s  reflection=19.32s  combined=47.61s
+Ticket: {'ticket_id': 'ESC-c1122a93', 'employee_id': 'E001', 'request': 'E001: my back hurts, can I get a standing desk?', 'reason': 'item not in catalog', 'timestamp': '2026-10-03T02:43:04.328831+00:00', 'escalated': True}
 Result: ESCALATE  flagged=True  match=True
 
 ========================================================================
@@ -538,7 +545,7 @@ Request: E006: my monitor flickers constantly, can I get a replacement?
 MCP tools: ['get_employee_info', 'get_policy_limits', 'check_request_eligibility', 'flag_for_human_review']
 
 --- step 1 ---
-{"thought": "Need to check employee info and policy limits to determine eligibility for a monitor replacement.", "action": "get_employee_info", "action_input": {"employee_id": "E006"}, "decision": null, "draft": null}
+{"thought": "Need to check employee info and policy limits for E006.", "action": "get_employee_info", "action_input": {"employee_id": "E006"}, "decision": null, "draft": null}
 Observation: {
   "found": true,
   "employee_id": "E006",
@@ -558,7 +565,7 @@ Observation: {
 }
 
 --- step 2 ---
-{"thought": "Check policy limits for a standard role to determine eligibility for a monitor replacement.", "action": "get_policy_limits", "action_input": {"role": "standard"}, "decision": null, "draft": null}
+{"thought": "Need to check policy limits for a standard role.", "action": "get_policy_limits", "action_input": {"role": "standard"}, "decision": null, "draft": null}
 Observation: {
   "found": true,
   "role": "standard",
@@ -593,7 +600,7 @@ Observation: {
 }
 
 --- step 3 ---
-{"thought": "Check if the request for a monitor replacement is eligible based on the employee's tenure and policy limits.", "action": "check_request_eligibility", "action_input": {"employee_id": "E006", "item": "monitor"}, "decision": null, "draft": null}
+{"thought": "Check if the request for a monitor replacement is eligible based on policy.", "action": "check_request_eligibility", "action_input": {"employee_id": "E006", "item": "monitor"}, "decision": null, "draft": null}
 Observation: {
   "status": "unknown",
   "employee_id": "E006",
@@ -657,29 +664,34 @@ Observation: {
 }
 
 --- step 4 ---
-{"thought": "The request is unknown due to missing issue date for the monitor. Need to escalate for further review.", "action": "flag_for_human_review", "action_input": {"employee_id": "E006", "request": "replacement of flickering monitor", "reason": "missing_issue_date"}, "decision": "ESCALATE", "draft": "The request for a monitor replacement is unknown due to missing issue date. Escalating for further review."}
+{"thought": "The request is unknown due to missing issue date for the monitor. Need to escalate for human review.", "action": "flag_for_human_review", "action_input": {"employee_id": "E006", "request": "replacement of flickering monitor", "reason": "missing_issue_date"}, "decision": "ESCALATE", "draft": "Request for replacement of flickering monitor (E006) is unknown due to missing issue date. Escalating for human review."}
 Observation: {
-  "ticket_id": "ESC-427a424b",
+  "ticket_id": "ESC-c285cafb",
   "employee_id": "E006",
   "request": "E006: my monitor flickers constantly, can I get a replacement?",
   "reason": "missing_issue_date",
-  "timestamp": "2026-10-03T01:51:10.023532+00:00",
+  "timestamp": "2026-10-03T02:43:53.681970+00:00",
   "escalated": true
 }
 
 --- step 5 ---
-{"thought": "The request has been escalated for review due to missing issue date for the monitor.", "action": null, "action_input": {}, "decision": "ESCALATE", "draft": "The request for a monitor replacement is unknown due to missing issue date. Escalating for further review."}
+{"thought": "The request has been escalated for human review due to missing issue date for the monitor.", "action": null, "action_input": {}, "decision": "ESCALATE", "draft": "Request for replacement of flickering monitor (E006) is unknown due to missing issue date. Escalating for human review."}
 
 Decision: ESCALATE
-Draft: The request for a monitor replacement is unknown due to missing issue date. Escalating for further review.
+Draft: Request for replacement of flickering monitor (E006) is unknown due to missing issue date. Escalating for human review.
 
 --- reflection ---
-{"verdict": "AGREE", "decision": "ESCALATE", "draft": "The request for a monitor replacement is being escalated for further review due to a missing issue date.", "reason": "The Decision aligns with the Observations. The tool correctly identifies the missing issue date as the reason for escalation, and the draft accurately reflects this. The draft avoids inventing dates or promises."}
+{
+  "verdict": "AGREE",
+  "decision": "ESCALATE",
+  "draft": "Request for replacement of flickering monitor (E006) is being escalated due to a missing issue date.",
+  "reason": "missing_issue_date"
+}
 Reflection agrees; keeping Decision: ESCALATE
 Final decision: ESCALATE
-Final draft: The request for a monitor replacement is being escalated for further review due to a missing issue date.
-Latency: react=29.34s  reflection=21.78s  combined=51.13s
-Ticket: {'ticket_id': 'ESC-427a424b', 'employee_id': 'E006', 'request': 'E006: my monitor flickers constantly, can I get a replacement?', 'reason': 'missing_issue_date', 'timestamp': '2026-10-03T01:51:10.023532+00:00', 'escalated': True}
+Final draft: Request for replacement of flickering monitor (E006) is being escalated due to a missing issue date.
+Latency: react=30.78s  reflection=20.80s  combined=51.58s
+Ticket: {'ticket_id': 'ESC-c285cafb', 'employee_id': 'E006', 'request': 'E006: my monitor flickers constantly, can I get a replacement?', 'reason': 'missing_issue_date', 'timestamp': '2026-10-03T02:43:53.681970+00:00', 'escalated': True}
 Result: ESCALATE  flagged=True  match=True
 
 ========================================================================
@@ -690,7 +702,7 @@ Request: E011: my doctor says I need a lighter laptop because of a wrist injury.
 MCP tools: ['get_employee_info', 'get_policy_limits', 'check_request_eligibility', 'flag_for_human_review']
 
 --- step 1 ---
-{"thought": "Need to verify employee's role, tenure, and current equipment.", "action": "get_employee_info", "action_input": {"employee_id": "E011"}, "decision": null, "draft": null}
+{"thought": "Need to check employee info and policy limits for E011.", "action": "get_employee_info", "action_input": {"employee_id": "E011"}, "decision": null, "draft": null}
 Observation: {
   "found": true,
   "employee_id": "E011",
@@ -706,7 +718,7 @@ Observation: {
 }
 
 --- step 2 ---
-{"thought": "Need to check policy limits for a standard role to determine eligibility for a lighter laptop.", "action": "get_policy_limits", "action_input": {"role": "standard"}, "decision": null, "draft": null}
+{"thought": "Need to check policy limits for a standard role.", "action": "get_policy_limits", "action_input": {"role": "standard"}, "decision": null, "draft": null}
 Observation: {
   "found": true,
   "role": "standard",
@@ -741,7 +753,7 @@ Observation: {
 }
 
 --- step 3 ---
-{"thought": "Need to check if the request for a lighter laptop is eligible under the policy.", "action": "check_request_eligibility", "action_input": {"employee_id": "E011", "item": "laptop"}, "decision": null, "draft": null}
+{"thought": "Check if the request for a lighter laptop is eligible under the policy.", "action": "check_request_eligibility", "action_input": {"employee_id": "E011", "item": "laptop"}, "decision": null, "draft": null}
 Observation: {
   "status": "ineligible",
   "employee_id": "E011",
@@ -803,43 +815,37 @@ Observation: {
 }
 
 --- step 4 ---
-{"thought": "The request for a lighter laptop is ineligible because the refresh interval has not been met. The employee's current laptop was issued less than 4 years ago.", "action": null, "action_input": {}, "decision": "DENY", "draft": "The request for a lighter laptop is denied because the refresh interval of 4 years has not been met. The current laptop was issued less than 4 years ago."}
-Thought: The reason mentions special circumstances (medical, accessibility, legal, security, or an exception), which policy tools cannot weigh.
-Action: flag_for_human_review
-Action Input: {"employee_id": "E011", "request": "E011: my doctor says I need a lighter laptop because of a wrist injury.", "reason": "special_circumstances"}
-Observation: {
-  "ticket_id": "ESC-8c5ad0c3",
-  "employee_id": "E011",
-  "request": "E011: my doctor says I need a lighter laptop because of a wrist injury.",
-  "reason": "special_circumstances",
-  "timestamp": "2026-10-03T01:51:59.840031+00:00",
-  "escalated": true
-}
+{"thought": "The request is ineligible because the refresh interval for a laptop has not been met.", "action": null, "action_input": {}, "decision": "DENY", "draft": "Your request for a lighter laptop is denied because the refresh interval has not been met. You must wait until the interval of 4 years has passed since your current laptop was issued on 2025-09-01."}
 
-Decision: ESCALATE
-Draft: Your request was sent to a human reviewer.
+Decision: DENY
+Draft: Your request for a lighter laptop is denied because the refresh interval has not been met. You must wait until the interval of 4 years has passed since your current laptop was issued on 2025-09-01.
 
 --- reflection ---
-{
-  "verdict": "AGREE",
-  "decision": "ESCALATE",
-  "draft": "Your request for a lighter laptop has been escalated for review due to a doctor's recommendation regarding a wrist injury.",
-  "reason": "The laptop is ineligible based on the refresh interval, but the request involves special circumstances (doctor's recommendation). The original draft was adequate, but I've improved it to better reflect the reason for escalation."
+{"verdict": "DISAGREE", "decision": "ESCALATE", "draft": "Your request for a lighter laptop is being escalated due to a doctor's recommendation for a medical accommodation related to a wrist injury.", "reason": "Medical needs (doctor, injury, disability)"}
+Reflection disagrees (verdict=DISAGREE, reflected=ESCALATE); escalating.
+Action: flag_for_human_review
+Action Input: {"employee_id": "E011", "request": "E011: my doctor says I need a lighter laptop because of a wrist injury.", "reason": "Medical needs (doctor, injury, disability)"}
+Observation: {
+  "ticket_id": "ESC-375987c6",
+  "employee_id": "E011",
+  "request": "E011: my doctor says I need a lighter laptop because of a wrist injury.",
+  "reason": "Medical needs (doctor, injury, disability)",
+  "timestamp": "2026-10-03T02:45:02.864369+00:00",
+  "escalated": true
 }
-Reflection agrees; keeping Decision: ESCALATE
 Final decision: ESCALATE
-Final draft: Your request for a lighter laptop has been escalated for review due to a doctor's recommendation regarding a wrist injury.
-Latency: react=23.08s  reflection=22.33s  combined=45.41s
-Ticket: {'ticket_id': 'ESC-8c5ad0c3', 'employee_id': 'E011', 'request': 'E011: my doctor says I need a lighter laptop because of a wrist injury.', 'reason': 'special_circumstances', 'timestamp': '2026-10-03T01:51:59.840031+00:00', 'escalated': True}
+Final draft: Your request was sent to a human reviewer.
+Latency: react=24.36s  reflection=18.55s  combined=42.91s
+Ticket: {'ticket_id': 'ESC-375987c6', 'employee_id': 'E011', 'request': 'E011: my doctor says I need a lighter laptop because of a wrist injury.', 'reason': 'Medical needs (doctor, injury, disability)', 'timestamp': '2026-10-03T02:45:02.864369+00:00', 'escalated': True}
 Result: ESCALATE  flagged=True  match=True
 
 ========================================================================
 SUMMARY
 ========================================================================
-  approve                expected=APPROVE  got=APPROVE  ok  react= 21.48s reflection= 22.09s combined= 43.57s
-  deny                   expected=DENY     got=DENY     ok  react= 20.74s reflection= 23.12s combined= 43.86s
-  escalate-contractor    expected=ESCALATE got=ESCALATE ok  react= 21.21s reflection= 17.12s combined= 38.32s
-  escalate-unknown-item  expected=ESCALATE got=ESCALATE ok  react= 22.46s reflection= 18.74s combined= 41.20s
-  escalate-missing-date  expected=ESCALATE got=ESCALATE ok  react= 29.34s reflection= 21.78s combined= 51.13s
-  escalate-special       expected=ESCALATE got=ESCALATE ok  react= 23.08s reflection= 22.33s combined= 45.41s
+  approve                expected=APPROVE  got=APPROVE  ok  react= 22.56s reflection= 21.70s combined= 44.25s
+  deny                   expected=DENY     got=DENY     ok  react= 22.29s reflection= 20.32s combined= 42.61s
+  escalate-contractor    expected=ESCALATE got=ESCALATE ok  react= 23.35s reflection= 16.68s combined= 40.03s
+  escalate-unknown-item  expected=ESCALATE got=ESCALATE ok  react= 28.29s reflection= 19.32s combined= 47.61s
+  escalate-missing-date  expected=ESCALATE got=ESCALATE ok  react= 30.78s reflection= 20.80s combined= 51.58s
+  escalate-special       expected=ESCALATE got=ESCALATE ok  react= 24.36s reflection= 18.55s combined= 42.91s
 ```

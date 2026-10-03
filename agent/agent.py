@@ -26,7 +26,7 @@ if str(ROOT) not in sys.path:
 from agent.mcp_client import McpClient, server_url
 from agent.model_adapter import ModelAdapter, OllamaAdapter
 from agent.reflection import apply_reflection, choose_draft, decisions_disagree, reflect
-from agent.schemas import ReactStep
+from agent.schemas import Outcome, ReactStep
 
 load_dotenv(ROOT / ".env")
 
@@ -217,6 +217,8 @@ async def run_react(
             )
             await escalate(result.reason.strip() or "reflection_disagreement")
             decision, draft = "ESCALATE", ESCALATED_DRAFT
+            if result.decision == Outcome.ESCALATE:
+                draft = choose_draft(ESCALATED_DRAFT, result.draft, request, observations)
         else:
             decision = apply_reflection(decision, result.verdict, result.decision)
             print("Reflection agrees; keeping Decision:", decision)
