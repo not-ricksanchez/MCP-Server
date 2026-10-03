@@ -21,9 +21,17 @@ Allowed items: `laptop`, `monitor`, `keyboard`, `mouse`, `headset`.
 
 Anything else (standing desk, tablet, second laptop, dock, etc.) is out of catalog → **escalate**.
 
+Tools accept only the exact singular catalog name (case and surrounding whitespace are ignored). The agent maps the user's wording to that name, e.g. "monitors" or "a second monitor" → `monitor`. If a tool receives anything else, including a plural, it returns `unknown` with reason `unknown_item`, and the request is escalated.
+
 ## Policy rules (by role)
 
 “Refresh” means the last issue date for that item type is older than the interval, or there is no record of that item.
+
+Eligibility is checked in this order:
+
+1. Below the role's count limit → `eligible`. Issue dates of items already held do not matter.
+2. At the limit and any held item of that type has no issue date → `unknown` (escalate).
+3. At the limit → `eligible` once the **oldest** held item is at least the interval old (an item exactly at the interval qualifies), otherwise `ineligible`. An interval of 0 means replace anytime.
 
 | Role | Laptop | Monitor | Peripherals (keyboard / mouse / headset) |
 |---|---|---|---|
@@ -37,6 +45,8 @@ Anything else (standing desk, tablet, second laptop, dock, etc.) is out of catal
 1. **Approve** — employee is known, item is in catalog, `check_request_eligibility` is `eligible`, and the reason is ordinary (broken, too old, standard kit).
 2. **Deny** — same facts are known, eligibility is `ineligible`, and the reason is ordinary. Draft a polite denial that cites the policy the tools returned. **Do not** call `flag_for_human_review`.
 3. **Escalate** — anything that would require guessing. Call `flag_for_human_review` with a concrete reason.
+
+An **ordinary** reason is routine wear or need: broken, slow, too old, lost, new hire, or standard kit. A reason is **not** ordinary if it mentions accessibility, ergonomics, disability, medical needs (doctor, injury), legal matters, security, or an executive exception or other policy exception. Those cases are escalated even when eligibility is `eligible` or `ineligible`.
 
 ## What is ambiguous (escalate, do not decide)
 
